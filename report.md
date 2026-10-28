@@ -56,6 +56,8 @@ sparse size tested was 1024. These are the largest sizes tested, not a
 verified maximum feasible size for the computer; no explicit memory
 budget was defined.
 
+The largest dense matrix size tested was 2048 × 2048, while the largest sparse matrix size tested was 1024 × 1024. The dense benchmark at size 2048 took approximately 15 minutes to execute, so the experiment was stopped to keep the overall evaluation time manageable. Consequently, these sizes represent the limits of the experiments performed, not a formally verified maximum hardware capacity. Larger matrices were not systematically tested.
+
 ## 3. Dense multiplication results
 
 Median execution times are in seconds. Speedup is the baseline `ijk`
