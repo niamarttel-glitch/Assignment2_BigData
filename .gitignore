@@ -1,21 +1,16 @@
-# Ejecutables de C
-*.exe
-*.o
-multiplicar
-
-# Archivos compilados de Java
-*.class
-
-# Archivos temporales o de entorno de Python
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
+.env
 
-# Archivos de datos generados muy grandes (opcional)
-# matrices_*.txt
-# Archivos compilados e intermedios
-*.exe
-*.class
+# Compiled C executables
+src/c/*.exe
+*.o
 
-# Archivos de datos generados
-data/*.txt
-matrices_prueba_3.txt
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db

@@ -1,69 +1,172 @@
-# Big Data Assignment 01: Matrix Multiplication Benchmark
+# Optimised Matrix Multiplication Approaches and Sparse Matrices
 
-**Author:** Daniela Eridenia Martel Valido  
-**Course:** Big Data - University of Las Palmas de Gran Canaria (GCID)
+## Overview
 
-## Description
-This repository contains the source code and reproducibility materials for a comparative study on the performance and memory usage of a basic $O(n^3)$ matrix multiplication algorithm implemented in **Python**, **C**, and **Java**.
+This project investigates ways to improve matrix multiplication
+performance and reduce memory usage when matrices contain many zero
+values. It compares three dense matrix multiplication loop orders and
+evaluates a Compressed Sparse Row (CSR) representation for sparse
+matrices.
 
-## Project Structure
-```text
+The implementation is written in C, with Python scripts for running
+experiments, recording configuration information, and plotting results.
+
+## Project structure
+
+``` text
 .
 ├── src/
-│   ├── c/
-│   │   └── multiply.c       # C implementation
-│   ├── java/
-│   │   └── Multiply.java    # Java implementation
-│   └── python/
-│       ├── generator.py     # Random matrix generator
-│       ├── multiply.py      # Python implementation
-│       ├── benchmark.py     # Orchestrator script for compilation and execution
-│       └── plot.py          # Script to generate the performance graph
-├── data/                    # Generated matrix text files (auto-generated)
-├── results.md               # Markdown table with the output metrics (auto-generated)
-├── performance_graph.png    # Performance plot (auto-generated)
-└── README.md                # This file
+│   └── c/
+│       ├── dense.c
+│       ├── dense.exe
+│       ├── sparse.c
+│       └── sparse.exe
+├── scripts/
+│   ├── generate_data.py
+│   ├── plot_results.py
+│   └── run_benchmarks.py
+├── results/
+│   ├── dense_results.csv
+│   ├── sparse_results.csv
+│   ├── generation_config.json
+│   └── *.png
+├── report.md
+└── README.md
 ```
 
+The `.exe` files are compiled Windows executables. They can be
+regenerated from the C source files using the commands below.
 
-## Prerequisites
+## Requirements
 
-To reproduce this benchmark on a Windows machine, ensure you have the following installed and added to your system's PATH:
+-   Windows with PowerShell, or another environment with a compatible C
+    compiler.
+-   GCC (for example, MinGW-w64 GCC).
+-   Python 3.
+-   The Python packages required by `scripts/plot_results.py`, if any.
+    Install them according to that script's imports.
 
-1. Python 3.x (with matplotlib installed: pip install matplotlib).
+## Compilation
 
-2. GCC Compiler (MinGW or similar) to compile the C code.
+Run these commands from the project root directory:
 
-3. Java Development Kit (JDK 17 or higher) to compile and run the Java code.
+``` powershell
+gcc -std=c11 -O2 -Wall -Wextra src/c/dense.c -o src/c/dense.exe -lm -lpsapi
+gcc -std=c11 -O2 -Wall -Wextra src/c/sparse.c -o src/c/sparse.exe -lm -lpsapi
+```
 
-## How to Reproduce the Experiment
+`-O2` enables compiler optimisations. `-Wall -Wextra` enable additional
+compiler warnings. `-lm` links the math library; `-lpsapi` is used for
+process memory measurements on Windows.
 
-**1. Run the Benchmark**
+## Running the programs
 
-The entire process (compiling C and Java code, generating matrices of sizes 10 to 500, and measuring execution time and memory) is fully automated by the benchmark.py script.
+Run commands from the project root.
 
-Run the following command from the root directory of the project:
-python src/python/benchmark.py
+### Dense matrix multiplication
 
+``` powershell
+.\src\c\dense.exe 256 all
+.\src\c\dense.exe 1024 ijk
+.\src\c\dense.exe 1024 ikj
+.\src\c\dense.exe 1024 blocked
+```
 
-Note: The execution for $N=500$ in Python will take a significant amount of time (approx. 100 seconds). Please let the script finish. Once completed, it will automatically generate the results.md file.
+The command-line arguments are:
 
+``` text
+dense.exe [matrix_size] [all|ijk|ikj|blocked]
+```
 
-**2. Generate the Plot**
+-   `ijk`: baseline loop order.
+-   `ikj`: changes the loop order to improve access to contiguous
+    elements.
+-   `blocked`: processes matrix tiles to improve cache locality. The
+    current block size is 32.
 
-After the benchmark has finished and generated the results.md file, you can generate the comparative logarithmic chart by running:
+### Sparse matrix multiplication
 
-python src/python/plot.py
+``` powershell
+.\src\c\sparse.exe 256 90
+.\src\c\sparse.exe 1024 95
+```
 
-This will read the generated metrics and save a performance_graph.png image in the root directory.
+The command-line arguments are:
 
+``` text
+sparse.exe [matrix_size] [zero_percentage]
+```
 
+The sparse program compares multiplication using a dense representation
+of matrix A with multiplication using A stored in CSR format. The
+right-hand matrix B and output matrix C remain dense.
 
-## Hardware Environment Used for the Report
+## Running the experiment suite
 
-CPU: 12th Gen Intel Core i5-12450H (2.00 GHz)
+The benchmark script runs `ikj` and `blocked` for dense matrices of
+sizes 256, 512, 1024, and 2048, and CSR experiments for sizes 256, 512,
+and 1024 at 50%, 70%, 90%, and 95% target zeros.
 
-RAM: 16 GB
+``` powershell
+python scripts/run_benchmarks.py
+```
 
-OS: Windows 11 Home
+**Important:** the script writes benchmark output to the CSV files.
+Running it again may append duplicate rows to existing results,
+depending on the C programs' output-writing behaviour. Back up the
+current CSV files before rerunning the full suite, and inspect the CSV
+headers and rows afterwards. The baseline `ijk` results currently
+recorded for sizes 256, 512, and 1024 are already present in
+`results/dense_results.csv`; the suite does not run `ijk` as part of its
+dense loop.
 
+The `generate_data.py` script records or documents the experiment
+configuration; the C programs generate the matrix values used in each
+experiment. See the script for its exact behaviour.
+
+## Results and interpretation
+
+See [`report.md`](report.md) for the experimental tables and discussion.
+
+The recorded dense results show that `ikj` and `blocked` are
+substantially faster than the baseline `ijk` for the tested sizes. At
+size 1024, the median time is approximately 4.56 s for `ijk`, 0.654 s
+for `ikj`, and 0.543 s for `blocked`. At size 2048, the recorded medians
+are approximately 5.83 s for `ikj` and 4.46 s for `blocked`; no `ijk`
+measurement is currently recorded for that size.
+
+The sparse results show that CSR multiplication becomes more
+advantageous as the number of zeros increases. For size 1024 with a
+target of 95% zeros, the recorded CSR multiplication time is
+approximately 0.0291 s, compared with 0.611 s for dense multiplication.
+CSR conversion took approximately 0.00305 s, so conversion plus CSR
+multiplication took approximately 0.0322 s for that experiment.
+
+These are measurements from the current test environment, not universal
+performance guarantees. Actual density may differ slightly from the
+target zero percentage. The product matrix C was fully dense in the
+recorded experiments, so CSR was used only for input matrix A.
+
+## Reproducibility and measurement notes
+
+-   Dense multiplication timings use three measured repetitions after a
+    warm-up; reported comparisons in the report use medians.
+-   The sparse implementation measures conversion time separately from
+    multiplication time.
+-   The reported CSR storage size refers to matrix A's CSR arrays; dense
+    storage refers to matrix A as a dense array. Matrix B and result
+    matrix C are dense in both approaches.
+-   Peak working set is a process-level memory metric and should not be
+    interpreted as memory used exclusively by the multiplication
+    algorithm.
+-   The dense and sparse programs use separate random-number-generation
+    implementations. Do not assume that their generated matrices are
+    identical across Part A and Part B.
+-   The exact commands and detailed results are documented in
+    `report.md`.
+
+## Notes
+
+This README describes the project files and experiment results currently
+recorded. If the source code, CSV output format, or experiment
+configuration changes, update this document and `report.md` accordingly.
