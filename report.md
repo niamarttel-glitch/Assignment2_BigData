@@ -159,19 +159,32 @@ storage.
 
 ## 5. Memory observations and bottlenecks
 
-Dense peak working set rose from 6,565,888 bytes at size 256 to
-138,641,408 bytes at size 2048. This is process-level memory, including
-allocations and runtime overhead, rather than an isolated measurement of
-algorithmic memory.
+Dense peak working set rose from 6,565,888 bytes at size 256 to 138,641,408 bytes at size 2048. This is process-level memory, including allocations and runtime overhead, rather than an isolated measurement of algorithmic memory.
 
-For a fixed size, sparse peak working set generally decreases as A
-becomes more sparse, but not in direct proportion to CSR storage because
-B and C remain dense and other process allocations are included. Likely
-bottlenecks include dense matrix memory access, CSR index traversal,
-dense-to-CSR conversion, and allocation of the dense output. Cache
-misses and hardware-counter metrics were not measured, so explanations
-about cache behaviour are interpretations rather than direct
-observations.
+For a fixed size, sparse peak working set generally decreases as A becomes more sparse, but not in direct proportion to CSR storage because B and C remain dense and other process allocations are included. Likely bottlenecks include dense matrix memory access, CSR index traversal, dense-to-CSR conversion, and allocation of the dense output.
+
+### 5.1. Cache Miss Analysis with Intel VTune Profiler
+
+To investigate memory performance and potential bottlenecks, Intel VTune Profiler was used to analyse the `blocked` and `ikj` dense matrix multiplication algorithms with matrices of size 2048 × 2048. Both analyses used the same 64-bit executable generated from `dense.c`.
+
+The thread-level analysis of the `ikj` profile showed that the main thread accounted for 185.760 seconds of CPU time and all reported load, store, and LLC miss events. A second thread was detected, but VTune attributed no CPU time or memory events to it. Therefore, the higher thread count does not provide evidence of parallel execution in `ikj`. However, the origin of the additional thread could not be determined from the available profiling data, and the difference in thread counts should be considered when interpreting the comparison.
+
+| Metric | Blocked | ikj |
+|---|---:|---:|
+| Median execution time | 16.806 s | 17.024 s |
+| LLC misses | 7,883,609,336 | 7,994,806,019 |
+| P-core Memory Bound | 49.0% | 50.5% |
+| P-core DRAM Bound | 52.5% | 53.8% |
+| Average DRAM bandwidth | 4.298 GB/s | 5.858 GB/s |
+| Peak working set | 131.02 MiB | 131.02 MiB |
+
+The `blocked` implementation recorded approximately 111 million fewer last-level cache (LLC) misses than `ikj`, representing a reduction of approximately 1.39%. Its median execution time was also approximately 0.22 seconds lower, making it around 1.28% faster in these profiling runs.
+
+Both implementations showed substantial memory-bound behaviour on the performance cores, with Memory Bound values of 49.0% for `blocked` and 50.5% for `ikj`. The corresponding DRAM Bound values were 52.5% and 53.8%. These measurements suggest that memory-related stalls may contribute to execution time, although they do not establish that memory access is the only performance bottleneck.
+
+Overall, `blocked` showed a modest advantage in this profiling run, with fewer LLC misses and a slightly shorter median execution time. However, VTune reported different total thread counts for the two runs (one for `blocked` and two for `ikj`), so the results should be interpreted cautiously rather than as a perfectly controlled comparison.
+
+These profiled execution times are specific to the VTune runs and should not replace the execution times reported in the main benchmark results, which were obtained under different conditions.
 
 ## 6. Reproducibility
 
