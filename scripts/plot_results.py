@@ -6,9 +6,15 @@ from pathlib import Path
 results = Path("results")
 results.mkdir(exist_ok=True)
 
+# Official benchmark sizes (exclude small test runs)
+dense_sizes = [256, 512, 1024, 2048]
+sparse_sizes = [256, 512, 1024]
+
 # 1. Dense matrix multiplication
 dense = pd.read_csv(results / "dense_results.csv")
+dense = dense[dense["size"].isin(dense_sizes)]
 
+# Median of the three measured repetitions
 summary = (
     dense.groupby(["size", "method"])["time_seconds"]
     .median()
@@ -17,7 +23,13 @@ summary = (
 
 plt.figure()
 for method, group in summary.groupby("method"):
-    plt.plot(group["size"], group["time_seconds"], marker="o", label=method)
+    group = group.sort_values("size")
+    plt.plot(
+        group["size"],
+        group["time_seconds"],
+        marker="o",
+        label=method
+    )
 
 plt.xlabel("Matrix size (n)")
 plt.ylabel("Median execution time (seconds)")
@@ -30,9 +42,11 @@ plt.close()
 
 # 2. Sparse matrix multiplication
 sparse = pd.read_csv(results / "sparse_results.csv")
+sparse = sparse[sparse["size"].isin(sparse_sizes)]
 
 plt.figure()
 for zero_percent, group in sparse.groupby("zero_percent"):
+    group = group.sort_values("size")
     plt.plot(
         group["size"],
         group["csr_seconds"],
@@ -49,13 +63,10 @@ plt.tight_layout()
 plt.savefig(results / "sparse_times.png", dpi=150)
 plt.close()
 
-# 3. Dense vs CSR execution time
-
-# 3. Dense vs CSR execution time at n=1024
+# 3. Dense vs CSR multiplication at n=1024
 comparison = sparse[sparse["size"] == 1024].sort_values("zero_percent")
 
 plt.figure(figsize=(8, 5))
-
 plt.plot(
     comparison["zero_percent"],
     comparison["dense_seconds"],
@@ -63,7 +74,6 @@ plt.plot(
     linewidth=2,
     label="Dense"
 )
-
 plt.plot(
     comparison["zero_percent"],
     comparison["csr_seconds"],
