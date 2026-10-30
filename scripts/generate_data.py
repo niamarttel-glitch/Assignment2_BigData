@@ -22,6 +22,13 @@ def build_config():
     return {
         "seed": SEED,
         "numeric_type": "double",
+
+        "execution": {
+            "workers": 1,
+            "warmup_repetitions": 1,
+            "measured_repetitions": 3,
+        },
+
         "dense": {
             "sizes": DENSE_SIZES,
             "methods": ["ijk", "ikj", "blocked"],
@@ -31,6 +38,7 @@ def build_config():
                 "-1.000 and 1.000."
             ),
         },
+
         "sparse": {
             "sizes": SPARSE_SIZES,
             "zero_percentages": ZERO_PERCENTAGES,

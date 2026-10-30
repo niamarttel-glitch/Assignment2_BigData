@@ -180,6 +180,7 @@ static void save_result(size_t n, int zero_percent, size_t nnz,
                         double conversion_time, double dense_time,
                         double sparse_time, size_t dense_bytes,
                         size_t csr_bytes, size_t peak_bytes) {
+
     FILE *file = fopen("results/sparse_results.csv", "a+");
 
     if (file == NULL) {
@@ -194,7 +195,8 @@ static void save_result(size_t n, int zero_percent, size_t nnz,
                 "size,zero_percent,nnz,density,output_nnz,"
                 "output_density,conversion_seconds,dense_seconds,"
                 "csr_seconds,dense_storage_bytes,csr_storage_bytes,"
-                "peak_working_set_bytes\n");
+                "peak_working_set_bytes,numeric_type,workers,"
+                "warmup_repetitions,measured_repetitions\n");
     }
 
     double density = (double)nnz / ((double)n * (double)n);
@@ -202,14 +204,15 @@ static void save_result(size_t n, int zero_percent, size_t nnz,
         (double)output_nnz / ((double)n * (double)n);
 
     fprintf(file,
-            "%zu,%d,%zu,%.8f,%zu,%.8f,%.9f,%.9f,%.9f,%zu,%zu,%zu\n",
-            n, zero_percent, nnz, density, output_nnz, output_density,
+            "%zu,%d,%zu,%.8f,%zu,%.8f,%.9f,%.9f,%.9f,"
+            "%zu,%zu,%zu,double,1,1,%d\n",
+            n, zero_percent, nnz, density,
+            output_nnz, output_density,
             conversion_time, dense_time, sparse_time,
-            dense_bytes, csr_bytes, peak_bytes);
+            dense_bytes, csr_bytes, peak_bytes, REPETITIONS);
 
     fclose(file);
 }
-
 
 int main(int argc, char *argv[]) {
     size_t n = 256;

@@ -14,3 +14,14 @@ src/c/*.exe
 *.log
 .DS_Store
 Thumbs.db
+
+
+results/dense_results_backup.csv
+results/dense_results_previous.csv
+results/dense_results_with_duplicates_backup.csv
+results/sparse_results_backup.csv
+results/sparse_results_previous.csv
+
+
+# Intel VTune profiling results
+results/vtune_blocked_2048/

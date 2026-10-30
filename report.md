@@ -16,9 +16,11 @@ The dense implementation uses square `double` matrices and compares three algori
 - **`ikj`**: loop-reordered implementation.
 - **`blocked`**: tiled implementation with a block size of 32.
 
-The original benchmark sizes were 256, 512, 1024 and 2048. The baseline `ijk` was measured at sizes 256, 512 and 1024 only; it was not run at 2048. All three methods are sequential.
+The tested matrix sizes were 256, 512, 1024 and 2048. All three algorithms were measured at every size. All methods use sequential execution with one worker.
 
-Input values are deterministic pseudo-random multiples of 0.001 in `[-1, 1]`, generated using seed `123456789`. The result is checked against the baseline for correctness. A warm-up is performed, followed by three measured repetitions, and the reported execution time is the median. The multiplication timer excludes warm-up and matrix-clearing work.
+Input values are deterministic pseudo-random multiples of 0.001 in `[-1, 1]`, generated using seed `123456789`. The result is checked against the baseline implementation for correctness. Each method performs one warm-up followed by three measured repetitions. The reported execution time is the median of those three measurements.
+
+The multiplication timer excludes warm-up and matrix-clearing work. The output matrix is reset before each measured repetition.
 
 ### 2.2 Sparse multiplication
 
@@ -30,7 +32,9 @@ Conversion time is recorded separately from dense and CSR multiplication times. 
 
 `conversion_seconds + csr_seconds`
 
-Each configuration has a warm-up and three measured repetitions; the CSV stores the timing summary. The CSR result is validated against dense multiplication using the same logical A and B within the sparse program.
+Each configuration performs one warm-up and three measured repetitions. The sparse CSV stores the median timing for each configuration.
+
+The CSR result is validated against dense multiplication using the same logical A and B within the sparse program.
 
 The dense and sparse programs use different pseudo-random generator implementations. Therefore, their generated matrices should not be described as identical across Parts A and B. The matched dense-versus-CSR comparison within each sparse experiment remains valid.
 
@@ -55,37 +59,39 @@ Median execution times are reported in seconds. Speedup is calculated as the bas
 
 | Size | `ijk` (s) | `ikj` (s) | `blocked` (s) | `ijk` / `ikj` | `ijk` / `blocked` |
 |---:|---:|---:|---:|---:|---:|
-| 256 | 0.036382 | 0.009060 | 0.008841 | 4.02× | 4.11× |
-| 512 | 0.325446 | 0.070255 | 0.071121 | 4.63× | 4.58× |
-| 1024 | 4.559563 | 0.653556 | 0.542615 | 6.98× | 8.40× |
-| 2048 | Not measured | 5.829692 | 4.455106 | — | — |
+| 256 | 0.011277 | 0.007134 | 0.006841 | 1.58× | 1.65× |
+| 512 | 0.398556 | 0.054901 | 0.053830 | 7.26× | 7.40× |
+| 1024 | 4.037054 | 0.520242 | 0.449929 | 7.76× | 8.97× |
+| 2048 | 111.137877 | 4.753414 | 3.778137 | 23.38× | 29.42× |
 
 ### 3.1 Discussion
 
-Both optimisations substantially reduce runtime compared with `ijk` at sizes where all three methods were measured. At size 256, `ikj` and `blocked` have similar execution times. At size 512, `ikj` is slightly faster than `blocked`, showing that blocking does not guarantee an improvement at every size.
+Both optimisations substantially reduce runtime compared with `ijk` at every tested size.
 
-At sizes 1024 and 2048, `blocked` is faster than `ikj` in the original benchmark results. These findings are consistent with improvements in memory locality from loop reordering and tiling, although the original benchmarks did not directly measure cache misses.
+At size 256, `ikj` and `blocked` have similar execution times, with `blocked` being slightly faster. At sizes 512, 1024 and 2048, `blocked` also obtains the lowest median execution time.
 
-Since `ijk` was not run at size 2048, no baseline speedup can be reported for that size.
+The difference becomes more noticeable as matrix size increases. At size 2048, `blocked` is approximately 29.42 times faster than the baseline `ijk` implementation.
+
+These findings are consistent with improvements in memory locality from loop reordering and tiling, although execution-time measurements alone do not directly establish the number of cache misses or prove a specific hardware bottleneck.
 
 ## 4. Sparse CSR results
 
-Times are reported in seconds. **CSR total** includes conversion plus CSR multiplication. The speedup column compares dense multiplication against CSR multiplication alone.
+Times are reported in seconds. **CSR total** includes conversion plus CSR multiplication. The first speedup column compares dense multiplication against CSR multiplication alone. The second compares dense multiplication against the estimated total CSR cost, including conversion.
 
-| Size | Zeros (%) | Actual density (%) | A dense (bytes) | A CSR (bytes) | Dense multiply (s) | CSR multiply (s) | Conversion (s) | CSR total (s) | Dense / CSR |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 256 | 50 | 50.02 | 524,288 | 394,364 | 0.008634 | 0.004104 | 0.000950 | 0.005054 | 2.10× |
-| 256 | 70 | 29.96 | 524,288 | 236,624 | 0.008311 | 0.002476 | 0.000602 | 0.003078 | 3.36× |
-| 256 | 90 | 10.01 | 524,288 | 79,748 | 0.008783 | 0.000857 | 0.000298 | 0.001154 | 10.26× |
-| 256 | 95 | 4.90 | 524,288 | 39,596 | 0.008560 | 0.000512 | 0.000209 | 0.000721 | 16.73× |
-| 512 | 50 | 49.91 | 2,097,152 | 1,571,952 | 0.067882 | 0.034313 | 0.003412 | 0.037725 | 1.98× |
-| 512 | 70 | 29.85 | 2,097,152 | 941,100 | 0.065371 | 0.020206 | 0.002555 | 0.022761 | 3.23× |
-| 512 | 90 | 9.98 | 2,097,152 | 315,864 | 0.067319 | 0.007125 | 0.001291 | 0.008416 | 9.45× |
-| 512 | 95 | 4.99 | 2,097,152 | 159,024 | 0.067808 | 0.003628 | 0.000914 | 0.004543 | 18.69× |
-| 1024 | 50 | 49.98 | 8,388,608 | 6,292,832 | 0.651252 | 0.332062 | 0.012362 | 0.344424 | 1.96× |
-| 1024 | 70 | 29.95 | 8,388,608 | 3,772,292 | 0.647719 | 0.182837 | 0.009167 | 0.192004 | 3.54× |
-| 1024 | 90 | 9.99 | 8,388,608 | 1,260,884 | 0.605667 | 0.059042 | 0.005183 | 0.064225 | 10.26× |
-| 1024 | 95 | 4.98 | 8,388,608 | 631,232 | 0.610994 | 0.029122 | 0.003053 | 0.032176 | 20.98× |
+| Size | Zeros (%) | Actual density (%) | A dense (bytes) | A CSR (bytes) | Dense multiply (s) | CSR multiply (s) | Conversion (s) | CSR total (s) | Dense / CSR | Dense / total |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 256 | 50 | 50.02 | 524,288 | 394,364 | 0.007598 | 0.003529 | 0.000811 | 0.004340 | 2.15× | 1.75× |
+| 256 | 70 | 29.96 | 524,288 | 236,624 | 0.007611 | 0.001998 | 0.000652 | 0.002650 | 3.81× | 2.87× |
+| 256 | 90 | 10.01 | 524,288 | 79,748 | 0.007248 | 0.000717 | 0.000339 | 0.001056 | 10.11× | 6.86× |
+| 256 | 95 | 4.90 | 524,288 | 39,596 | 0.006790 | 0.000350 | 0.000195 | 0.000545 | 19.40× | 12.46× |
+| 512 | 50 | 49.91 | 2,097,152 | 1,571,952 | 0.051723 | 0.026313 | 0.003006 | 0.029319 | 1.97× | 1.76× |
+| 512 | 70 | 29.85 | 2,097,152 | 941,100 | 0.056267 | 0.017572 | 0.002575 | 0.020147 | 3.20× | 2.79× |
+| 512 | 90 | 9.98 | 2,097,152 | 315,864 | 0.052704 | 0.005715 | 0.001172 | 0.006887 | 9.22× | 7.65× |
+| 512 | 95 | 4.99 | 2,097,152 | 159,024 | 0.057411 | 0.002800 | 0.001096 | 0.003896 | 20.50× | 14.74× |
+| 1024 | 50 | 49.98 | 8,388,608 | 6,292,832 | 0.500754 | 0.241228 | 0.013385 | 0.254613 | 2.08× | 1.97× |
+| 1024 | 70 | 29.95 | 8,388,608 | 3,772,292 | 0.518691 | 0.149686 | 0.009457 | 0.159143 | 3.47× | 3.26× |
+| 1024 | 90 | 9.99 | 8,388,608 | 1,260,884 | 0.522450 | 0.049501 | 0.004853 | 0.054354 | 10.55× | 9.61× |
+| 1024 | 95 | 4.98 | 8,388,608 | 631,232 | 0.522942 | 0.025395 | 0.003327 | 0.028722 | 20.59× | 18.21× |
 
 ### 4.1 Storage and output density
 
@@ -99,9 +105,9 @@ All tested products have `output_nnz = n × n` and output density 1.0 (100%). Th
 
 CSR multiplication is faster in every tested configuration, and the advantage generally increases with sparsity.
 
-For size 1024 with approximately 95% zeros, CSR multiplication takes 0.029122 seconds compared with 0.610994 seconds for dense multiplication, approximately 21.0× faster. Including conversion gives an estimated CSR total of 0.032176 seconds, which remains approximately 19.0× faster than dense multiplication.
+For size 1024 with approximately 95% zeros, CSR multiplication takes 0.025395 seconds compared with 0.522942 seconds for dense multiplication, approximately 20.59× faster. Including conversion gives an estimated CSR total of 0.028722 seconds, which remains approximately 18.21× faster than dense multiplication.
 
-At size 1024 with approximately 50% zeros, CSR is approximately 2.0× faster for multiplication alone and 1.9× faster including conversion.
+At size 1024 with approximately 50% zeros, CSR is approximately 2.08× faster for multiplication alone and 1.97× faster including conversion.
 
 CSR indexing and row-pointer traversal add overhead, so the advantage is smaller when many entries are nonzero. If the same CSR matrix is reused for multiple multiplications, conversion can be amortised. For a one-off multiplication, conversion should be included in the end-to-end comparison.
 
@@ -109,7 +115,7 @@ Because C is dense, these results demonstrate the benefits of sparse input rathe
 
 ## 5. Memory use and observed bottlenecks
 
-In the original dense benchmarks, peak working set rose from 6,565,888 bytes at size 256 to 138,641,408 bytes at size 2048. This is a process-level memory measurement, including allocations and runtime overhead, rather than an isolated measurement of algorithmic memory.
+Peak working set is a process-level measurement and includes allocations and runtime overhead. It should not be interpreted as the exact memory consumed exclusively by the matrix data structures.
 
 For a fixed size, sparse peak working set generally decreases as A becomes more sparse, but not in direct proportion to CSR storage because B and C remain dense and other process allocations are included.
 
@@ -172,28 +178,45 @@ gcc -std=c11 -O2 -Wall -Wextra src/c/dense.c -o src/c/dense.exe -lm -lpsapi
 gcc -std=c11 -O2 -Wall -Wextra src/c/sparse.c -o src/c/sparse.exe -lm -lpsapi
 ```
 
-Run a dense experiment:
+Run the complete benchmark suite:
+
+```powershell
+python .\scripts\run_benchmarks.py
+```
+
+Generate the plots from the existing CSV files:
+
+```powershell
+python .\scripts\plot_results.py
+```
+
+Generate the experimental configuration file:
+
+```powershell
+python .\scripts\generate_data.py
+```
+
+Individual C experiments can also be run manually:
 
 ```powershell
 .\src\c\dense.exe 1024 all
-```
-
-Run a sparse experiment:
-
-```powershell
 .\src\c\sparse.exe 1024 95
 ```
 
-**Important:** the benchmark driver appends measurements to the result CSVs through the C programs. Back up or rename existing CSVs before rerunning the suite if a fresh dataset is required. Do not append a new run and then treat the combined data as the original experiment.
+**Important:** the C programs append measurements to the result CSVs. The benchmark runner skips configurations already present in the CSV files, but manually executing an experiment that has already been recorded can add duplicate rows. Back up or rename existing CSVs before rerunning individual experiments if a fresh dataset is required.
 
 The additional memory-budget tests used the existing 64-bit executable and were run separately from the original benchmark data. Their results should be kept separate from the original CSVs and timing comparisons.
 
 ## 7. Conclusion
 
-The dense multiplication results show that loop reordering and blocking substantially improve performance over the baseline at the tested sizes. The benefit depends on matrix size: `ikj` is slightly faster than `blocked` at size 512, while `blocked` is the fastest of the tested methods at sizes 1024 and 2048 in the original benchmarks. Since `ijk` was not measured at 2048, no baseline speedup is available for that size.
+The dense multiplication results show that loop reordering and blocking substantially improve performance over the baseline at all tested sizes. The benefit increases with matrix size. `blocked` obtains the lowest median execution time in the final benchmark dataset, reaching a speedup of approximately 29.42× over `ijk` at size 2048.
 
-CSR is particularly beneficial when matrix A is highly sparse. Its storage requirement and multiplication time decrease as the proportion of zeros rises. Conversion does not erase the advantage in the tested configurations, but it must be included in end-to-end comparisons. The results apply to the tested implementation and configurations; sparsity percentage alone does not universally determine performance because indexing overhead, matrix structure, conversion cost, dense operands and output density also matter.
+CSR is particularly beneficial when matrix A is highly sparse. Its storage requirement and multiplication time decrease as the proportion of zeros rises. Conversion does not erase the advantage in the tested configurations, but it must be included in end-to-end comparisons. At size 1024 and approximately 95% zeros, the estimated total CSR time, including conversion, is approximately 18.21 times faster than dense multiplication.
+
+The results apply to the tested implementation and configurations; sparsity percentage alone does not universally determine performance because indexing overhead, matrix structure, conversion cost, dense operands and output density also matter.
 
 The VTune profiles show that both `blocked` and `ikj` exhibit substantial memory-bound behaviour on the performance cores. In the profiling runs, `blocked` recorded fewer LLC misses and a slightly lower median execution time. However, the difference was modest, and the differing reported thread counts mean that the comparison should be interpreted cautiously.
 
-Finally, the additional memory experiments identified **2864 × 2864** as the largest tested dense matrix that remained within the chosen 256 MiB peak-working-set budget. The next tested size, 2880 × 2880, exceeded the budget slightly. This provides a practical estimate of feasible matrix size under the experimental criterion, but not proof of an absolute maximum. Overall, the experiments demonstrate the trade-offs between algorithmic optimisation, memory behaviour, sparse storage and conversion overhead.
+Finally, the additional memory experiments identified **2864 × 2864** as the largest tested dense matrix that remained within the chosen 256 MiB peak-working-set budget. The next tested size, 2880 × 2880, exceeded the budget slightly. This provides a practical estimate of feasible matrix size under the experimental criterion, but not proof of an absolute maximum.
+
+Overall, the experiments demonstrate the trade-offs between algorithmic optimisation, memory behaviour, sparse storage and conversion overhead.

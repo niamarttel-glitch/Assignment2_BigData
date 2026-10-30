@@ -176,6 +176,7 @@ double benchmark(MultiplyFunction multiply,
 void save_results(const char *method, size_t n,
                   const double *times, int count,
                   size_t peak_memory_bytes) {
+
     FILE *file = fopen("results/dense_results.csv", "a+");
 
     if (file == NULL) {
@@ -188,18 +189,19 @@ void save_results(const char *method, size_t n,
     if (ftell(file) == 0) {
         fprintf(file,
                 "size,method,repetition,time_seconds,"
-                "peak_working_set_bytes\n");
+                "peak_working_set_bytes,numeric_type,workers,"
+                "warmup_repetitions,measured_repetitions\n");
     }
 
     for (int r = 0; r < count; r++) {
-        fprintf(file, "%zu,%s,%d,%.9f,%zu\n",
+        fprintf(file,
+                "%zu,%s,%d,%.9f,%zu,double,1,1,%d\n",
                 n, method, r + 1, times[r],
-                peak_memory_bytes);
+                peak_memory_bytes, count);
     }
 
     fclose(file);
 }
-
 
 size_t get_peak_memory_bytes(void) {
     PROCESS_MEMORY_COUNTERS info;

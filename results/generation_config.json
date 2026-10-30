@@ -1,21 +1,44 @@
 {
   "seed": 123456789,
   "numeric_type": "double",
-  "reproducibility": {
-    "description": "The matrix generation is deterministic for a fixed seed and the same program implementation. Dense and sparse programs use separate pseudo-random number generators, so their generated matrices are not guaranteed to be identical."
+  "execution": {
+    "workers": 1,
+    "warmup_repetitions": 1,
+    "measured_repetitions": 3
   },
   "dense": {
-    "seed": 123456789,
-    "sizes": [256, 512, 1024, 2048],
-    "methods": ["ijk", "ikj", "blocked"],
-    "generation": "The C program generates two reproducible matrices A and B. Values are pseudo-random multiples of 0.001 between -1.000 and 1.000."
+    "sizes": [
+      256,
+      512,
+      1024,
+      2048
+    ],
+    "methods": [
+      "ijk",
+      "ikj",
+      "blocked"
+    ],
+    "generation": "C program generates two reproducible matrices A and B. Values are pseudo-random multiples of 0.001 between -1.000 and 1.000."
   },
   "sparse": {
-    "seed": 123456789,
-    "sizes": [256, 512, 1024],
-    "zero_percentages": [50, 70, 90, 95],
-    "density_percentages": [50, 30, 10, 5],
-    "generation": "The C program uses its own deterministic xorshift-style pseudo-random number generator, initialized with seed 123456789. Matrix A is generated using the requested zero percentage, with nonzero candidate values drawn from multiples of 0.001 between -1.000 and 1.000. Matrix B is generated pseudo-randomly using the same generator state.",
+    "sizes": [
+      256,
+      512,
+      1024
+    ],
+    "zero_percentages": [
+      50,
+      70,
+      90,
+      95
+    ],
+    "density_percentages": [
+      50,
+      30,
+      10,
+      5
+    ],
+    "generation": "C program generates A with a requested percentage of zeros and nonzero candidate values drawn from multiples of 0.001 between -1.000 and 1.000. Matrix B is generated pseudo-randomly. The sparse program uses its own PRNG.",
     "storage_format": "CSR"
   }
 }

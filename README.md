@@ -1,172 +1,249 @@
-# Optimised Matrix Multiplication Approaches and Sparse Matrices
+# Assignment 2 – Big Data: Dense and Sparse Matrix Multiplication
 
-## Overview
+## 1. Project description
 
-This project investigates ways to improve matrix multiplication
-performance and reduce memory usage when matrices contain many zero
-values. It compares three dense matrix multiplication loop orders and
-evaluates a Compressed Sparse Row (CSR) representation for sparse
-matrices.
+This project studies the performance of dense and sparse matrix multiplication using C.
 
-The implementation is written in C, with Python scripts for running
-experiments, recording configuration information, and plotting results.
+It compares three algorithms for dense matrix multiplication:
 
-## Project structure
+- `ijk`: traditional row-column multiplication.
+- `ikj`: loop reordering to improve memory access.
+- `blocked`: blocked matrix multiplication using cache-friendly submatrices.
 
-``` text
-.
+It also compares dense matrix multiplication with sparse matrix multiplication using the Compressed Sparse Row (CSR) format.
+
+The experiments measure execution time, memory usage, matrix density and CSR conversion overhead.
+
+## 2. Project structure
+
+```text
+Assignment2_BigData/
+│
 ├── src/
 │   └── c/
 │       ├── dense.c
-│       ├── dense.exe
-│       ├── sparse.c
-│       └── sparse.exe
+│       └── sparse.c
+│
 ├── scripts/
 │   ├── generate_data.py
 │   ├── plot_results.py
 │   └── run_benchmarks.py
+│
 ├── results/
 │   ├── dense_results.csv
 │   ├── sparse_results.csv
 │   ├── generation_config.json
-│   └── *.png
+│   ├── dense_times.png
+│   ├── sparse_times.png
+│   └── dense_vs_csr.png
+│
 ├── report.md
 └── README.md
 ```
 
-The `.exe` files are compiled Windows executables. They can be
-regenerated from the C source files using the commands below.
+## 3. Requirements
 
-## Requirements
+### C compiler
+- GCC (MinGW.org GCC-6.3.0-1).
 
--   Windows with PowerShell, or another environment with a compatible C
-    compiler.
--   GCC (for example, MinGW-w64 GCC).
--   Python 3.
--   The Python packages required by `scripts/plot_results.py`, if any.
-    Install them according to that script's imports.
+### Python
+- Python 3.14.2
+- pandas 2.3.3
+- matplotlib 3.10.8
 
-## Compilation
+## 4. Compilation
 
-Run these commands from the project root directory:
+From the project root directory, compile the C programs using:
 
-``` powershell
+**Dense multiplication:**
+
+```bash
 gcc -std=c11 -O2 -Wall -Wextra src/c/dense.c -o src/c/dense.exe -lm -lpsapi
+```
+
+**Sparse multiplication:**
+
+```bash
 gcc -std=c11 -O2 -Wall -Wextra src/c/sparse.c -o src/c/sparse.exe -lm -lpsapi
 ```
 
-`-O2` enables compiler optimisations. `-Wall -Wextra` enable additional
-compiler warnings. `-lm` links the math library; `-lpsapi` is used for
-process memory measurements on Windows.
+## 5. Running the experiments
 
-## Running the programs
+The complete benchmark suite can be executed with:
 
-Run commands from the project root.
-
-### Dense matrix multiplication
-
-``` powershell
-.\src\c\dense.exe 256 all
-.\src\c\dense.exe 1024 ijk
-.\src\c\dense.exe 1024 ikj
-.\src\c\dense.exe 1024 blocked
-```
-
-The command-line arguments are:
-
-``` text
-dense.exe [matrix_size] [all|ijk|ikj|blocked]
-```
-
--   `ijk`: baseline loop order.
--   `ikj`: changes the loop order to improve access to contiguous
-    elements.
--   `blocked`: processes matrix tiles to improve cache locality. The
-    current block size is 32.
-
-### Sparse matrix multiplication
-
-``` powershell
-.\src\c\sparse.exe 256 90
-.\src\c\sparse.exe 1024 95
-```
-
-The command-line arguments are:
-
-``` text
-sparse.exe [matrix_size] [zero_percentage]
-```
-
-The sparse program compares multiplication using a dense representation
-of matrix A with multiplication using A stored in CSR format. The
-right-hand matrix B and output matrix C remain dense.
-
-## Running the experiment suite
-
-The benchmark script runs `ikj` and `blocked` for dense matrices of
-sizes 256, 512, 1024, and 2048, and CSR experiments for sizes 256, 512,
-and 1024 at 50%, 70%, 90%, and 95% target zeros.
-
-``` powershell
+```bash
 python scripts/run_benchmarks.py
 ```
 
-**Important:** the script writes benchmark output to the CSV files.
-Running it again may append duplicate rows to existing results,
-depending on the C programs' output-writing behaviour. Back up the
-current CSV files before rerunning the full suite, and inspect the CSV
-headers and rows afterwards. The baseline `ijk` results currently
-recorded for sizes 256, 512, and 1024 are already present in
-`results/dense_results.csv`; the suite does not run `ijk` as part of its
-dense loop.
+The script runs the following experiments:
 
-The `generate_data.py` script records or documents the experiment
-configuration; the C programs generate the matrix values used in each
-experiment. See the script for its exact behaviour.
+### Dense matrix multiplication
 
-## Results and interpretation
+- Matrix sizes: 256, 512, 1024 and 2048.
+- Algorithms: `ijk`, `ikj` and `blocked`.
+- One warm-up repetition.
+- Three measured repetitions per configuration.
 
-See [`report.md`](report.md) for the experimental tables and discussion.
+### Sparse matrix multiplication
 
-The recorded dense results show that `ikj` and `blocked` are
-substantially faster than the baseline `ijk` for the tested sizes. At
-size 1024, the median time is approximately 4.56 s for `ijk`, 0.654 s
-for `ikj`, and 0.543 s for `blocked`. At size 2048, the recorded medians
-are approximately 5.83 s for `ikj` and 4.46 s for `blocked`; no `ijk`
-measurement is currently recorded for that size.
+- Matrix sizes: 256, 512 and 1024.
+- Target zero percentages: 50%, 70%, 90% and 95%.
+- Comparison between dense multiplication and CSR multiplication.
+- One warm-up repetition.
+- Three measured repetitions per configuration.
 
-The sparse results show that CSR multiplication becomes more
-advantageous as the number of zeros increases. For size 1024 with a
-target of 95% zeros, the recorded CSR multiplication time is
-approximately 0.0291 s, compared with 0.611 s for dense multiplication.
-CSR conversion took approximately 0.00305 s, so conversion plus CSR
-multiplication took approximately 0.0322 s for that experiment.
+The benchmark runner checks the existing CSV files and skips configurations that have already been recorded. This allows the experiment suite to resume without intentionally repeating completed configurations.
 
-These are measurements from the current test environment, not universal
-performance guarantees. Actual density may differ slightly from the
-target zero percentage. The product matrix C was fully dense in the
-recorded experiments, so CSR was used only for input matrix A.
+**Important:** The C programs append results to their CSV files. If they are executed manually for a configuration that is already present, duplicate rows may be added. Back up or clean the corresponding CSV before manually repeating an experiment.
 
-## Reproducibility and measurement notes
+## 6. Data generation and configuration
 
--   Dense multiplication timings use three measured repetitions after a
-    warm-up; reported comparisons in the report use medians.
--   The sparse implementation measures conversion time separately from
-    multiplication time.
--   The reported CSR storage size refers to matrix A's CSR arrays; dense
-    storage refers to matrix A as a dense array. Matrix B and result
-    matrix C are dense in both approaches.
--   Peak working set is a process-level memory metric and should not be
-    interpreted as memory used exclusively by the multiplication
-    algorithm.
--   The dense and sparse programs use separate random-number-generation
-    implementations. Do not assume that their generated matrices are
-    identical across Part A and Part B.
--   The exact commands and detailed results are documented in
-    `report.md`.
+The script:
 
-## Notes
+```bash
+python scripts/generate_data.py
+```
 
-This README describes the project files and experiment results currently
-recorded. If the source code, CSV output format, or experiment
-configuration changes, update this document and `report.md` accordingly.
+creates `results/generation_config.json`, which documents the experimental configuration.
+
+The configuration includes:
+
+- Random seed: `123456789`.
+- Numeric type: `double`.
+- Number of workers: 1.
+- Warm-up repetitions: 1.
+- Measured repetitions: 3.
+- Dense matrix sizes and algorithms.
+- Sparse matrix sizes and target zero percentages.
+- CSR storage format.
+
+The actual matrices are generated by the C programs. The zero percentages used for sparse matrices are probabilistic targets, so the actual density may differ slightly. The measured number of non-zero elements (`nnz`) and actual density are recorded in the results.
+
+## 7. Results and visualizations
+
+The benchmark results are stored in CSV files in the `results/` directory.
+
+### 7.1 Dense multiplication
+
+The following table shows the median execution time in seconds for each algorithm, calculated from three measured repetitions.
+
+| Matrix size | ijk (s) | ikj (s) | blocked (s) |
+|---:|---:|---:|---:|
+| 256 | 0.011277 | 0.007134 | 0.006841 |
+| 512 | 0.398556 | 0.054901 | 0.053830 |
+| 1024 | 4.037054 | 0.520242 | 0.449929 |
+| 2048 | 111.137877 | 4.753414 | 3.778137 |
+
+The results show that loop reordering and blocking substantially reduce execution time compared with the traditional `ijk` implementation, particularly for larger matrices.
+
+The blocked implementation obtains the lowest median execution time in these experiments.
+
+### 7.2 Sparse multiplication
+
+Sparse multiplication is evaluated using both dense and CSR representations.
+
+For a matrix of size 1024 with a target of 95% zeros, the measured results are:
+
+| Metric | Result |
+|---|---:|
+| Actual zero percentage | 95.02% |
+| Non-zero elements (nnz) | 52,261 |
+| Dense multiplication time | 0.522942 s |
+| CSR multiplication time | 0.025395 s |
+| CSR conversion time | 0.003327 s |
+| CSR time including conversion | 0.028722 s |
+
+The CSR representation reduces multiplication time considerably for highly sparse matrices. The conversion time is measured separately and should be considered when evaluating the total cost of using CSR.
+
+### 7.3 Generated plots
+
+The following visualizations are generated by `plot_results.py`:
+
+- `dense_times.png`: execution time comparison between the dense algorithms.
+- `sparse_times.png`: dense versus CSR execution time across different sparsity levels.
+- `dense_vs_csr.png`: comparison between dense and CSR multiplication for the selected matrix size.
+
+To regenerate the plots:
+
+```bash
+python scripts/plot_results.py
+```
+
+This script reads the CSV files and generates the PNG images. It does not execute benchmarks or modify the CSV data.
+
+## 8. CSV file formats
+
+### 8.1 Dense results
+
+`dense_results.csv` contains one row per measured repetition.
+
+Columns:
+
+```text
+size,
+method,
+repetition,
+time_seconds,
+peak_working_set_bytes,
+numeric_type,
+workers,
+warmup_repetitions,
+measured_repetitions
+```
+
+Each configuration contains three measured timing rows. The median is calculated during analysis and visualization.
+
+### 8.2 Sparse results
+
+`sparse_results.csv` contains one row per matrix size and target zero percentage. The timing values represent the median of the three measured repetitions.
+
+Columns:
+
+```text
+size,
+zero_percent,
+nnz,
+density,
+output_nnz,
+output_density,
+conversion_seconds,
+dense_seconds,
+csr_seconds,
+dense_storage_bytes,
+csr_storage_bytes,
+peak_working_set_bytes,
+numeric_type,
+workers,
+warmup_repetitions,
+measured_repetitions
+```
+
+The CSV records both input and output sparsity information, storage requirements and execution metadata.
+
+## 9. Experimental methodology and reproducibility
+
+The experiments use the following common configuration:
+
+- Numeric type: `double`.
+- Execution model: sequential, single worker.
+- Random seed: `123456789`.
+- Warm-up repetitions: 1.
+- Measured repetitions: 3.
+
+For dense multiplication, the three algorithms operate on square matrices.
+
+For sparse multiplication, matrix A is generated with a specified target zero percentage and then converted to CSR. Matrix B and the output matrix C use dense storage.
+
+The CSR conversion time is measured separately from the multiplication time.
+
+Before each timed repetition, the output matrix is reset to avoid carrying over values from a previous execution. The implementations also validate their results against a reference computation.
+
+The reported peak working set is a process-level memory measurement and should not be interpreted as the exact memory consumed exclusively by the matrix data structures.
+
+The dense and sparse implementations use their own random number generation logic. The fixed seed makes each implementation's input generation reproducible, but does not imply that both programs generate identical matrices.
+
+## 10. Detailed report
+
+The file `report.md` contains the detailed analysis of the experimental methodology, results and conclusions.
+
+Additional profiling information, where applicable, is documented separately from the standard benchmark CSV results.
